@@ -1,10 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { ListIncomesComponent } from '../../income/list-incomes/list-incomes.component';
+import { ListCategoriesComponent } from '../../category/list-categories/list-categories.component';
 
 @Component({
   selector: 'app-detail-project',
   standalone: true,
-  imports: [ListIncomesComponent],
+  imports: [ListIncomesComponent, ListCategoriesComponent],
   templateUrl: './detail-project.component.html',
   styleUrl: './detail-project.component.css'
 })

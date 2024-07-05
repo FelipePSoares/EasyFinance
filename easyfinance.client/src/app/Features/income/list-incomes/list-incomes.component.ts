@@ -67,7 +67,7 @@ export class ListIncomesComponent {
   }
 
   add(): void {
-    this.router.navigate(['projects/', this.projectId, '/add-income']);
+    this.router.navigate(['projects', this.projectId, 'add-income']);
   }
 
   save(): void {
@@ -88,7 +88,7 @@ export class ListIncomesComponent {
       this.incomeService.update(this.projectId, id, patch).subscribe({
         next: response => {
           this.editingIncome.name = response.name;
-          this.editingIncome = new Income();
+          this.editingIncome = new IncomeDto();
         },
         error: error => {
           this.httpErrors = true;

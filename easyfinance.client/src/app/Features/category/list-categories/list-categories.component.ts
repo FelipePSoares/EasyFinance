@@ -1,0 +1,120 @@
+import { AsyncPipe, CommonModule } from '@angular/common';
+import { Component, Input } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { BehaviorSubject, Observable, map } from 'rxjs';
+import { mapper } from '../../../core/utils/mappings/mapper';
+import { CategoryDto } from '../models/category-dto';
+import { Category } from '../../../core/models/category';
+import { CategoryService } from '../../../core/services/category.service';
+import { compare } from 'fast-json-patch';
+
+@Component({
+  selector: 'app-list-categories',
+  standalone: true,
+  imports: [
+    CommonModule,
+    AsyncPipe,
+    ReactiveFormsModule,
+    FontAwesomeModule
+  ],
+  templateUrl: './list-categories.component.html',
+  styleUrl: './list-categories.component.css'
+})
+export class ListCategoriesComponent {
+  private _projectId!: string;
+  private categories: BehaviorSubject<CategoryDto[]> = new BehaviorSubject<CategoryDto[]>([new CategoryDto()]);
+  categories$: Observable<CategoryDto[]> = this.categories.asObservable();
+  categoryForm!: FormGroup;
+  editingCategory: CategoryDto = new CategoryDto();
+  httpErrors = false;
+  errors: any;
+  faPlus = faPlus;
+
+  get projectId(): string {
+    return this._projectId;
+  }
+  @Input({ required: true })
+  set projectId(projectId: string) {
+    this._projectId = projectId;
+    this.categoryService.get(projectId)
+      .pipe(map(categories => mapper.mapArray(categories, Category, CategoryDto)))
+      .subscribe(
+        {
+          next: res => { this.categories.next(res); }
+        });
+  }
+
+  constructor(public categoryService: CategoryService, private router: Router) {
+    this.edit(new CategoryDto());
+  }
+
+  get id() {
+    return this.categoryForm.get('id');
+  }
+  get name() {
+    return this.categoryForm.get('name');
+  }
+  get goal() {
+    return this.categoryForm.get('goal');
+  }
+  
+  add(): void {
+    this.router.navigate(['projects', this.projectId, 'add-category']);
+  }
+
+  save(): void {
+    if (this.categoryForm.valid) {
+      const id = this.id?.value;
+      const name = this.name?.value;
+      const goal = this.goal?.value;
+
+      var newCategory = <CategoryDto>({
+        id: id,
+        name: name,
+        goal: goal
+      })
+      var patch = compare(this.editingCategory, newCategory);
+
+      this.categoryService.update(this.projectId, id, patch).subscribe({
+        next: response => {
+          this.editingCategory.name = response.name;
+          this.editingCategory = new CategoryDto();
+        },
+        error: error => {
+          this.httpErrors = true;
+          this.errors = error;
+        }
+      });
+    }
+  }
+
+  edit(category: CategoryDto): void {
+    this.editingCategory = category;
+    this.categoryForm = new FormGroup({
+      id: new FormControl(category.id),
+      name: new FormControl(category.name, [Validators.required]),
+      amount: new FormControl(category.goal)
+    });
+  }
+
+  cancelEdit(): void {
+    this.editingCategory = new CategoryDto();
+  }
+
+  remove(id: string): void {
+    this.categoryService.remove(this.projectId, id).subscribe({
+      next: response => {
+        const categoriesNewArray: CategoryDto[] = this.categories.getValue();
+
+        categoriesNewArray.forEach((item, index) => {
+          if (item.id === id) { categoriesNewArray.splice(index, 1); }
+        });
+
+        this.categories.next(categoriesNewArray);
+      }
+    })
+  }
+}
